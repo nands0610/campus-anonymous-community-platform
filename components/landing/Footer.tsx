@@ -11,7 +11,7 @@ export default function Footer() {
                                 P
                             </div>
                             <span className="text-xl font-bold tracking-tight text-slate-900">
-                                Pulse
+                                Geddit
                             </span>
                         </div>
                         <p className="text-slate-500 text-sm max-w-sm leading-relaxed">

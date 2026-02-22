@@ -25,7 +25,7 @@ export default function SignupPage() {
                 <div className="relative w-full max-w-[500px] aspect-square">
                     <Image
                         src="/signup.png"
-                        alt="Pulse Sign Up"
+                        alt="Sign Up"
                         fill
                         className="object-contain"
                         priority
@@ -38,8 +38,8 @@ export default function SignupPage() {
             <div className="flex-1 flex flex-col">
                 <header className="p-10 flex justify-end items-center lg:hidden">
                     <Link href="/" className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">P</div>
-                        <span className="text-lg font-bold text-slate-900">Pulse</span>
+                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">G</div>
+                        <span className="text-lg font-bold text-slate-900">Geddit</span>
                     </Link>
                 </header>
 

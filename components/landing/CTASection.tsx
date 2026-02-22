@@ -22,7 +22,7 @@ export default function CTASection() {
                         </h2>
 
                         <p className="text-lg text-slate-600 mb-10">
-                            Join thousands of students who are already using Pulse to share experiences and build a better campus community.
+                            Join thousands of students who are already using Geddit to share experiences and build a better campus community.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

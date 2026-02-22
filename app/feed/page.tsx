@@ -2,7 +2,6 @@
 
 import FeedLayout from "@/components/feed/FeedLayout";
 import PostCard from "@/components/feed/PostCard";
-import { Plus, Filter, Sparkles, Send } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function FeedPage() {
@@ -42,32 +41,6 @@ export default function FeedPage() {
     return (
         <FeedLayout>
             <div className="space-y-6">
-                {/* Create Post Action - Professional Minimalist */}
-                <div className="bg-white border border-slate-200 rounded-xl p-1 mb-6">
-                    <div className="flex items-center gap-4 p-4">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                            <Sparkles className="w-5 h-5" />
-                        </div>
-                        <input
-                            placeholder="What's the pulse of your campus?"
-                            className="flex-1 bg-transparent text-slate-900 font-medium text-sm outline-none placeholder:text-slate-400"
-                        />
-                        <button className="bg-primary text-white p-2.5 rounded-lg hover:bg-blue-700 transition-all shadow-sm">
-                            <Send className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Feed Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                        Recent Pulses
-                    </h2>
-                    <button className="text-xs font-bold text-primary hover:underline">
-                        Filter Feed
-                    </button>
-                </div>
-
                 {/* Post List */}
                 <div className="space-y-4">
                     {posts.map((post, index) => (
@@ -78,7 +51,7 @@ export default function FeedPage() {
                 {/* Load More */}
                 <div className="text-center py-12">
                     <button className="text-sm font-bold text-slate-400 hover:text-primary transition-all">
-                        Show older pulses
+                        Show older posts
                     </button>
                 </div>
             </div>

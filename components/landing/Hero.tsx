@@ -30,7 +30,7 @@ export default function Hero() {
                                 href="/auth/signup"
                                 className="btn-primary w-full sm:w-auto text-center"
                             >
-                                Join Pulse
+                                Join Geddit
                             </Link>
                             <Link
                                 href="/auth/signup"
@@ -50,7 +50,7 @@ export default function Hero() {
                         <div className="relative w-full max-w-[1000px] aspect-square">
                             <Image
                                 src="/hero_illustration.png"
-                                alt="Pulse Platform Interface"
+                                alt="Anonymous Platform Interface"
                                 fill
                                 className="object-contain"
                                 priority

@@ -9,12 +9,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
-              P
-            </div>
-            <span className="text-2xl font-black tracking-tight text-slate-900">
-              Pulse
-            </span>
+            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-bold text-lg">G</div>
+            <span className="text-xl font-bold text-slate-900 tracking-tight">Geddit</span>
           </Link>
           <div className="flex items-center gap-8">
             <Link

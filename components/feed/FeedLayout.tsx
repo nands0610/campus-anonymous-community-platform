@@ -21,21 +21,10 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                 <div className="max-w-[1280px] mx-auto px-6 h-full flex justify-between items-center">
                     <div className="flex items-center gap-10">
                         <Link href="/feed" className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-bold text-lg">P</div>
-                            <span className="text-xl font-bold text-slate-900 tracking-tight">Pulse</span>
+                            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-bold text-lg">G</div>
+                            <span className="text-xl font-bold text-slate-900 tracking-tight">Geddit</span>
                         </Link>
 
-                        <nav className="hidden md:flex items-center gap-6">
-                            {navItems.map((item) => (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={`text-sm font-semibold transition-colors hover:text-primary ${pathname === item.href ? 'text-primary' : 'text-slate-500'}`}
-                                >
-                                    {item.label}
-                                </Link>
-                            ))}
-                        </nav>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -43,7 +32,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                             <Search className="absolute left-3.5 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search campus pulses..."
+                                placeholder="Search campus posts..."
                                 className="pl-10 pr-4 py-2 bg-slate-100 border-transparent border focus:bg-white focus:border-primary/20 rounded-md text-sm font-medium outline-none transition-all w-64"
                             />
                         </div>
@@ -84,7 +73,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                         <div className="pt-6 border-t border-slate-100">
                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-3">Your Space</h4>
                             <div className="space-y-1 text-sm font-medium text-slate-600 px-3">
-                                <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Saved Pulses</p>
+                                <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Saved Posts</p>
                                 <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Your Interactions</p>
                                 <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Moderation Hub</p>
                             </div>
@@ -94,6 +83,24 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
 
                 {/* Main Feed Content - Spaced for reading */}
                 <main className="flex-1 max-w-2xl pb-24">
+                    {/* Community Sub-Header Bar (Wireframe 3) */}
+                    <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+
+                        <div className="flex items-center gap-4">
+                            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                                <Filter className="w-4 h-4" />
+                                Filter
+                            </button>
+                            <Link
+                                href="/feed/new"
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-sm shadow-primary/10"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Add new
+                            </Link>
+                        </div>
+                    </div>
+
                     {children}
                 </main>
 
@@ -110,7 +117,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                             ].map((topic) => (
                                 <div key={topic.tag} className="group cursor-pointer">
                                     <p className="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors">{topic.tag}</p>
-                                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">{topic.posts} pulses this week</p>
+                                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">{topic.posts} posts this week</p>
                                 </div>
                             ))}
                         </div>
@@ -118,7 +125,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
 
                     <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
                         <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-4">Engagement</h3>
-                        <p className="text-xs text-slate-500 leading-relaxed mb-4">Pulse is growing! Join the conversation and help build a better campus.</p>
+                        <p className="text-xs text-slate-500 leading-relaxed mb-4">Geddit is growing! Join the conversation and help build a better campus.</p>
                         <button className="w-full py-2 bg-white border border-slate-200 text-xs font-bold text-slate-700 rounded-md hover:bg-slate-50 transition-all">Invite Peers</button>
                     </div>
                 </aside>

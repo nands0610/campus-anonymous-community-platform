@@ -21,7 +21,7 @@ export default function PrivacySection() {
                             Privacy that works for <span className="text-primary italic">you.</span>
                         </h2>
                         <p className="text-lg text-slate-600 mb-10 leading-relaxed">
-                            We believe in the power of honest conversation. Pulse uses advanced alias rotation and secured campus-restricted authentication to ensure you can speak your mind without identifying yourself.
+                            We believe in the power of honest conversation. Geddit uses advanced alias rotation and secured campus-restricted authentication to ensure you can speak your mind without identifying yourself.
                         </p>
 
                         <div className="grid sm:grid-cols-2 gap-8">
@@ -52,7 +52,7 @@ export default function PrivacySection() {
                         <div className="relative w-full max-w-[1000px] aspect-square rounded-2xl overflow-hidden">
                             <Image
                                 src="/privacy.png"
-                                alt="Pulse Privacy Features"
+                                alt="Privacy Features"
                                 fill
                                 className="object-contain"
                             />

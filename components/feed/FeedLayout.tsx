@@ -4,10 +4,54 @@ import { Home, TrendingUp, BarChart2, Search, Bell, User, Plus, Filter, MessageS
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function FeedLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const supabase = createClient();
 
+    const [alias, setAlias] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadProfile() {
+        const { data: userRes } = await supabase.auth.getUser();
+        const user = userRes.user;
+
+        if (!user) {
+            if (!cancelled) setAlias(null);
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from("profiles")
+            .select("alias")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        if (!cancelled) {
+            if (error) {
+            setAlias(null);
+            } else {
+            setAlias(data?.alias ?? null);
+            }
+        }
+        }
+
+        loadProfile();
+
+        // Optional: live updates if auth state changes (login/logout)
+        const { data: sub } = supabase.auth.onAuthStateChange(() => {
+        loadProfile();
+        });
+
+        return () => {
+        cancelled = true;
+        sub.subscription.unsubscribe();
+        };
+    }, [supabase]);
     const navItems = [
         { icon: Home, label: "Feed", href: "/feed" },
         { icon: TrendingUp, label: "Trending", href: "/trending" },
@@ -44,7 +88,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
                                 <User className="w-4 h-4" />
                             </div>
-                            <span className="text-sm font-bold hidden sm:block">@silent_owl</span>
+                            <span className="text-sm font-bold hidden sm:block">{alias ? `@${alias}` : "Guest"}</span>
                         </Link>
                     </div>
                 </div>
@@ -105,6 +149,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                 </main>
 
                 {/* Right Sidebar - High Fidelity Info */}
+                {/* ADD DATABASE CONNECTION ONCE AI LAYER DONE */}
                 <aside className="hidden xl:block w-72 space-y-8 sticky top-24 h-fit">
                     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
                         <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-6">Trending Buzz</h3>

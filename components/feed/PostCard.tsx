@@ -3,7 +3,7 @@
 import { MessageSquare, Heart, Share2, MoreHorizontal, User } from "lucide-react";
 import { motion } from "framer-motion";
 
-export type PostType = "Confession" | "Question" | "Advice" | "Poll";
+export type PostType = "Confession" | "Advice";
 
 interface PostCardProps {
     username: string;

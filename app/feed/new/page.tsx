@@ -43,6 +43,64 @@ export default function NewPostPage() {
     const [postType, setPostType] = useState<"confession" | "advice">("confession");
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [isDraftSaving, setIsDraftSaving] = useState(false);
+    const [draftError, setDraftError] = useState<string | null>(null);
+
+    function handleCancelClick() {
+        const hasContent =
+            title.trim() ||
+            content.trim() ||
+            tags.length > 0 ||
+            currentTag.trim();
+
+        if (!hasContent) {
+            router.push("/feed");
+            return;
+        }
+
+        setDraftError(null);
+        setShowCancelModal(true);
+        }
+
+        function handleDelete() {
+        setShowCancelModal(false);
+        router.push("/feed");
+        }
+
+        async function handleSaveDraft() {
+        setIsDraftSaving(true);
+        setDraftError(null);
+
+        const { data: userRes, error: userErr } = await supabase.auth.getUser();
+        if (userErr || !userRes.user) {
+            setDraftError("You must be logged in.");
+            setIsDraftSaving(false);
+            return;
+        }
+
+        const user = userRes.user;
+
+        const { error } = await supabase.from("posts").insert({
+            author_id: user.id,
+            type: postType,
+            status: "draft",
+            title: title.trim() || null,
+            body: content.trim() || "",
+            user_tags: tags.map(t => t.trim()).filter(Boolean),
+        });
+
+        setIsDraftSaving(false);
+
+        if (error) {
+            setDraftError(error.message);
+            return;
+        }
+
+        setShowCancelModal(false);
+        router.push("/feed");
+        router.refresh();
+    }
 
     async function handlePost() {
     setIsSaving(true);
@@ -189,7 +247,13 @@ export default function NewPostPage() {
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                         </div>
                         <div className="flex items-center gap-4">
-                            <Link href="/feed" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-all px-4">Cancel</Link>
+                            <button
+                                type="button"
+                                onClick={handleCancelClick}
+                                className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-all px-4"
+                            >
+                                Cancel
+                            </button>
                             <button
                                 type="button"
                                 onClick={handlePost}
@@ -203,6 +267,48 @@ export default function NewPostPage() {
                     </div>
                 </div>
             </div>
+
+            {showCancelModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                    className="absolute inset-0 bg-black/40"
+                    onClick={() => setShowCancelModal(false)}
+                    />
+                    <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-md">
+                    <h3 className="text-lg font-bold text-slate-900">
+                        Save as draft?
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-2">
+                        You have unsaved changes. Do you want to save this post as a draft?
+                    </p>
+
+                    {draftError && (
+                        <p className="text-sm font-bold text-red-600 mt-3">
+                        {draftError}
+                        </p>
+                    )}
+
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="px-4 py-2 rounded-lg font-bold text-sm border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        >
+                        Delete
+                        </button>
+
+                        <button
+                        type="button"
+                        onClick={handleSaveDraft}
+                        disabled={isDraftSaving}
+                        className="px-4 py-2 rounded-lg font-bold text-sm bg-primary text-white hover:bg-blue-700 disabled:opacity-60"
+                        >
+                        {isDraftSaving ? "Saving..." : "Save as Draft"}
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                )}
         </FeedLayout>
     );
 }

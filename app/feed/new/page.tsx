@@ -5,6 +5,8 @@ import { ArrowLeft, Bold, Italic, List, ImageIcon, Tag, Send } from "lucide-reac
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function NewPostPage() {
     const [title, setTitle] = useState("");
@@ -35,6 +37,55 @@ export default function NewPostPage() {
         setTags(tags.filter((t) => t !== tagToRemove));
     };
 
+    const supabase = createClient();
+    const router = useRouter();
+
+    const [postType, setPostType] = useState<"confession" | "advice">("confession");
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+
+    async function handlePost() {
+    setIsSaving(true);
+    setSaveError(null);
+
+    // Basic validation
+    if (!content.trim()) {
+        setSaveError("Post content cannot be empty.");
+        setIsSaving(false);
+        return;
+    }
+
+    const { data: userRes, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userRes.user) {
+        setSaveError("You must be logged in to post.");
+        setIsSaving(false);
+        return;
+    }
+
+    const user = userRes.user;
+
+    const { error } = await supabase.from("posts").insert({
+        author_id: user.id,
+        type: postType,
+        status: "published",
+        title: title.trim() || null,
+        body: content.trim(),
+        user_tags: tags.map((t) => t.trim()).filter(Boolean),
+        // mood: null, toxicity_score: null, pii_flag: false, is_anonymous: true
+        published_at: new Date().toISOString(),
+    });
+
+    setIsSaving(false);
+
+    if (error) {
+        setSaveError(error.message);
+        return;
+    }
+
+    router.push("/feed");
+    router.refresh();
+    }
+
     return (
         <FeedLayout>
             <div className="max-w-2xl mx-auto">
@@ -52,6 +103,33 @@ export default function NewPostPage() {
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
 
                     <div className="p-8 space-y-8">
+                        <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Post Type</label>
+                        <div className="flex gap-2">
+                            <button
+                            type="button"
+                            onClick={() => setPostType("confession")}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
+                                postType === "confession"
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
+                            >
+                            Confession
+                            </button>
+                            <button
+                            type="button"
+                            onClick={() => setPostType("advice")}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
+                                postType === "advice"
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
+                            >
+                            Advice
+                            </button>
+                        </div>
+                        </div>
                         {/* Title Input */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-400 uppercase">Title</label>
@@ -102,14 +180,23 @@ export default function NewPostPage() {
                         </div>
                     </div>
 
+                    {saveError ? (
+                        <p className="text-sm font-bold text-red-600">{saveError}</p>
+                    ) : null}
+
                     {/* Footer Actions */}
                     <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                         </div>
                         <div className="flex items-center gap-4">
                             <Link href="/feed" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-all px-4">Cancel</Link>
-                            <button className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-primary/20 flex items-center gap-2">
-                                Post
+                            <button
+                                type="button"
+                                onClick={handlePost}
+                                disabled={isSaving}
+                                className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-60"
+                            >
+                                {isSaving ? "Posting..." : "Post"}
                                 <Send className="w-4 h-4" />
                             </button>
                         </div>

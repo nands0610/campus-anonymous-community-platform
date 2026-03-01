@@ -13,6 +13,7 @@ export default function NewPostPage() {
     const [content, setContent] = useState("");
     const [tags, setTags] = useState<string[]>([]);
     const [currentTag, setCurrentTag] = useState("");
+    const [isAnonymous, setIsAnonymous] = useState(true);  
 
     const pastelColors = [
         "border-[#38bdf8] text-[#0369A1] bg-white border", // Blue
@@ -88,6 +89,7 @@ export default function NewPostPage() {
             title: title.trim() || null,
             body: content.trim() || "",
             user_tags: tags.map(t => t.trim()).filter(Boolean),
+            is_anonymous: isAnonymous,
         });
 
         setIsDraftSaving(false);
@@ -129,7 +131,8 @@ export default function NewPostPage() {
         title: title.trim() || null,
         body: content.trim(),
         user_tags: tags.map((t) => t.trim()).filter(Boolean),
-        // mood: null, toxicity_score: null, pii_flag: false, is_anonymous: true
+        // mood: null, toxicity_score: null, pii_flag: false, 
+        is_anonymous: isAnonymous,
         published_at: new Date().toISOString(),
     });
 
@@ -187,6 +190,39 @@ export default function NewPostPage() {
                             Advice
                             </button>
                         </div>
+                        </div>
+
+                        {/* Anonymous Toggle */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-400 uppercase">
+                                Visibility
+                            </label>
+
+                            <div className="flex gap-2">
+                                <button
+                                type="button"
+                                onClick={() => setIsAnonymous(true)}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
+                                    isAnonymous
+                                    ? "bg-primary text-white border-primary"
+                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                }`}
+                                >
+                                Post Anonymously
+                                </button>
+
+                                <button
+                                type="button"
+                                onClick={() => setIsAnonymous(false)}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
+                                    !isAnonymous
+                                    ? "bg-primary text-white border-primary"
+                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                }`}
+                                >
+                                Show My Alias
+                                </button>
+                            </div>
                         </div>
                         {/* Title Input */}
                         <div className="space-y-2">

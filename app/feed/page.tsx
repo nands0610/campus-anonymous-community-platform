@@ -14,9 +14,7 @@ type DBPost = {
     published_at: string | null;
     user_tags: string[] | null;
     is_anonymous: boolean;
-    profiles: {
-        alias: string;
-    } | null;
+    profiles: { alias: string }[] | null;
 };
 
 function mapPostType(t: DBPost["type"]): PostType {
@@ -89,19 +87,21 @@ export default function FeedPage() {
         };
     }, [supabase, feedFilter]);
 
-    const cardPosts = posts.map((p) => ({
-        id: p.id,
-        username: p.is_anonymous || !p.profiles
-            ? "Anonymous"
-            : `@${p.profiles.alias}`,
-        time: timeAgo(p.published_at ?? p.created_at),
-        title: p.title ?? "",
-        content: p.body,
-        type: mapPostType(p.type),
-        tags: (p.user_tags ?? []).slice(0, 6),
-        reactions: 0,
-        comments: 0,
-    }));
+    const cardPosts = posts.map((p) => {
+        const alias = Array.isArray((p as any).profiles) ? (p as any).profiles[0]?.alias : (p as any).profiles?.alias;
+
+        return {
+            id: p.id,
+            username: p.is_anonymous || !alias ? "Anonymous" : `@${alias}`,
+            time: timeAgo(p.published_at ?? p.created_at),
+            title: p.title ?? "",
+            content: p.body,
+            type: mapPostType(p.type),
+            tags: (p.user_tags ?? []).slice(0, 6),
+            reactions: 0,
+            comments: 0,
+        };
+    });
 
     return (
         <FeedLayout>

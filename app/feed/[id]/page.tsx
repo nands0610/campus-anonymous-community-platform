@@ -12,7 +12,10 @@ import {
   Sparkles,
   Send,
   User,
+  Trash2,
 } from "lucide-react";
+
+type ReactionKey = "relate" | "support" | "helpful" | "funny";
 
 type PostRow = {
   id: string;
@@ -25,6 +28,23 @@ type PostRow = {
   status: "draft" | "published";
   is_anonymous: boolean;
   profiles: { alias: string }[] | null;
+};
+
+type CommentRow = {
+  id: string;
+  body: string;
+  created_at: string;
+  author_id: string;
+  is_anonymous: boolean;
+  profiles: any; // join shape can vary; we normalize below
+};
+
+type CommentUI = {
+  id: string;
+  authorId: string;
+  username: string;
+  time: string;
+  body: string;
 };
 
 function timeAgo(iso: string) {
@@ -43,15 +63,14 @@ function timeAgo(iso: string) {
   return `${days} days ago`;
 }
 
-type ReactionKey = "like" | "helpful" | "relate";
-
-type CommentUI = {
-  id: string;
-  username: string;
-  time: string;
-  body: string;
-  likes: number;
-};
+// Handles both shapes:
+// profiles: [{ alias: "x" }] OR profiles: { alias: "x" } OR null
+function getAlias(joinedProfiles: any): string | undefined {
+  if (!joinedProfiles) return undefined;
+  return Array.isArray(joinedProfiles)
+    ? joinedProfiles[0]?.alias
+    : joinedProfiles?.alias;
+}
 
 export default function PostDetailPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -59,15 +78,37 @@ export default function PostDetailPage() {
   const router = useRouter();
   const id = String(params?.id ?? "");
 
-  // Post loading (kept from your working version)
+  const [meId, setMeId] = useState<string | null>(null);
+
+  // post
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [post, setPost] = useState<PostRow | null>(null);
 
+  // comments
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [comments, setComments] = useState<CommentUI[]>([]);
+  const [commentAnon, setCommentAnon] = useState(false);
+
+  // reactions
+  const [reactionCounts, setReactionCounts] = useState<Record<ReactionKey, number>>({
+    relate: 0,
+    support: 0,
+    helpful: 0,
+    funny: 0,
+  });
+  const [myReactions, setMyReactions] = useState<Set<ReactionKey>>(new Set());
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null));
+  }, [supabase]);
+
+  // load post
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadPost() {
       if (!id) return;
 
       setLoading(true);
@@ -104,91 +145,206 @@ export default function PostDetailPage() {
       setLoading(false);
     }
 
-    load();
+    loadPost();
     return () => {
       cancelled = true;
     };
   }, [supabase, id]);
 
-  const alias = post?.profiles?.[0]?.alias;
-  const username = !post || post.is_anonymous || !alias ? "Anonymous" : `@${alias}`;
+  const postAlias = post?.profiles?.[0]?.alias;
+  const postUsername = !post || post.is_anonymous || !postAlias ? "Anonymous" : `@${postAlias}`;
 
-  // ---- UI ONLY: Reactions state (local)
-  const [reactionCounts, setReactionCounts] = useState<Record<ReactionKey, number>>({
-    like: 24,
-    helpful: 8,
-    relate: 13,
-  });
-  const [myReaction, setMyReaction] = useState<ReactionKey | null>(null);
+  // load comments
+  async function loadComments() {
+    if (!id) return;
+    setCommentLoading(true);
 
-  function toggleReaction(key: ReactionKey) {
-    setReactionCounts((prev) => {
-      const next = { ...prev };
+    const { data, error } = await supabase
+      .from("comments")
+      .select("id,body,created_at,author_id,is_anonymous,profiles:author_id ( alias )")
+      .eq("post_id", id)
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
 
-      // remove old reaction if exists
-      if (myReaction && myReaction !== key) {
-        next[myReaction] = Math.max(0, next[myReaction] - 1);
-      }
+    if (error) {
+      console.error(error);
+      setCommentLoading(false);
+      return;
+    }
 
-      // toggle same reaction
-      if (myReaction === key) {
-        next[key] = Math.max(0, next[key] - 1);
-        return next;
-      }
-
-      // set new reaction
-      next[key] = next[key] + 1;
-      return next;
+    const mapped: CommentUI[] = ((data ?? []) as CommentRow[]).map((c) => {
+      const a = getAlias(c.profiles);
+      const name = c.is_anonymous || !a ? "Anonymous" : `@${a}`;
+      return {
+        id: c.id,
+        authorId: c.author_id,
+        username: name,
+        time: timeAgo(c.created_at),
+        body: c.body,
+      };
     });
 
-    setMyReaction((prev) => (prev === key ? null : key));
+    setComments(mapped);
+    setCommentLoading(false);
   }
 
-  // ---- UI ONLY: Comments state (local)
-  const [commentText, setCommentText] = useState("");
-  const [comments, setComments] = useState<CommentUI[]>([
-    {
-      id: "c1",
-      username: "Anonymous",
-      time: "10 mins ago",
-      body: "This is so real 😭 Hang in there.",
-      likes: 12,
-    },
-    {
-      id: "c2",
-      username: "@nand_123",
-      time: "22 mins ago",
-      body: "If you want, I can share how I handled something similar.",
-      likes: 5,
-    },
-  ]);
+  useEffect(() => {
+    loadComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-  function addComment() {
+  // add comment
+  async function addComment() {
     const text = commentText.trim();
-    if (!text) return;
+    if (!text || !meId || !id) return;
 
-    const newComment: CommentUI = {
-      id: `local-${Date.now()}`,
-      username: "@you",
-      time: "just now",
-      body: text,
-      likes: 0,
+    // capture current toggle value *at click time*
+    const anon = commentAnon;
+
+    setCommentText("");
+
+    const optimisticId = `local-${Date.now()}`;
+    setComments((prev) => [
+      {
+        id: optimisticId,
+        authorId: meId,
+        username: anon ? "Anonymous" : "@you",
+        time: "just now",
+        body: text,
+      },
+      ...prev,
+    ]);
+
+    const { data, error } = await supabase
+      .from("comments")
+      .insert({
+        post_id: id,
+        author_id: meId,
+        body: text,
+        status: "published",
+        is_anonymous: anon,
+      })
+      .select("id,body,created_at,author_id,is_anonymous,profiles:author_id ( alias )")
+      .single();
+
+    if (error) {
+      setComments((prev) => prev.filter((c) => c.id !== optimisticId));
+      console.error(error);
+      return;
+    }
+
+    const row = data as CommentRow;
+    const a = getAlias(row.profiles);
+    const name = row.is_anonymous || !a ? "Anonymous" : `@${a}`;
+
+    const real: CommentUI = {
+      id: row.id,
+      authorId: row.author_id,
+      username: name,
+      time: timeAgo(row.created_at),
+      body: row.body,
     };
 
-    setComments((prev) => [newComment, ...prev]);
-    setCommentText("");
+    setComments((prev) => [real, ...prev.filter((c) => c.id !== optimisticId)]);
   }
 
-  function likeComment(commentId: string) {
-    setComments((prev) =>
-      prev.map((c) => (c.id === commentId ? { ...c, likes: c.likes + 1 } : c))
-    );
+  async function deleteComment(commentId: string) {
+    const prev = comments;
+    setComments((cs) => cs.filter((c) => c.id !== commentId));
+
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
+    if (error) {
+      setComments(prev);
+      console.error(error);
+    }
+  }
+
+  // reactions
+  async function loadReactions() {
+    if (!id) return;
+
+    const { data, error } = await supabase
+      .from("post_reactions")
+      .select("reaction,user_id")
+      .eq("post_id", id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const counts: Record<ReactionKey, number> = {
+      relate: 0,
+      support: 0,
+      helpful: 0,
+      funny: 0,
+    };
+    const mine = new Set<ReactionKey>();
+
+    for (const r of data ?? []) {
+      const k = r.reaction as ReactionKey;
+      counts[k] = (counts[k] ?? 0) + 1;
+      if (meId && r.user_id === meId) mine.add(k);
+    }
+
+    setReactionCounts(counts);
+    setMyReactions(mine);
+  }
+
+  useEffect(() => {
+    loadReactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, meId]);
+
+  async function toggleReaction(key: ReactionKey) {
+    if (!meId) return;
+
+    const has = myReactions.has(key);
+
+    setMyReactions((prev) => {
+      const next = new Set(prev);
+      if (has) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    setReactionCounts((prev) => ({
+      ...prev,
+      [key]: Math.max(0, prev[key] + (has ? -1 : 1)),
+    }));
+
+    if (has) {
+      const { error } = await supabase
+        .from("post_reactions")
+        .delete()
+        .eq("post_id", id)
+        .eq("user_id", meId)
+        .eq("reaction", key);
+
+      if (error) {
+        setMyReactions((prev) => new Set(prev).add(key));
+        setReactionCounts((prev) => ({ ...prev, [key]: prev[key] + 1 }));
+        console.error(error);
+      }
+    } else {
+      const { error } = await supabase
+        .from("post_reactions")
+        .insert({ post_id: id, user_id: meId, reaction: key });
+
+      if (error) {
+        setMyReactions((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+        setReactionCounts((prev) => ({ ...prev, [key]: Math.max(0, prev[key] - 1) }));
+        console.error(error);
+      }
+    }
   }
 
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      // Optional: you can show a toast later
     } catch {}
   }
 
@@ -213,7 +369,7 @@ export default function PostDetailPage() {
           <div className="text-sm font-bold text-slate-400">Post not found.</div>
         ) : (
           <div className="space-y-6">
-            {/* POST CARD */}
+            {/* POST */}
             <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm">
               <div className="flex items-start justify-between gap-6 mb-6">
                 <div className="flex items-center gap-3">
@@ -221,7 +377,7 @@ export default function PostDetailPage() {
                     <User className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-900">{username}</p>
+                    <p className="text-sm font-bold text-slate-900">{postUsername}</p>
                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">
                       • {timeAgo(post.published_at ?? post.created_at)}
                     </p>
@@ -257,28 +413,29 @@ export default function PostDetailPage() {
               ) : null}
             </div>
 
-            {/* REACTIONS BAR (UI ONLY) */}
+            {/* REACTIONS */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => toggleReaction("like")}
+                    onClick={() => toggleReaction("support")}
                     className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all flex items-center gap-2 ${
-                      myReaction === "like"
+                      myReactions.has("support")
                         ? "bg-red-50 border-red-200 text-red-600"
                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     <Heart className="w-4 h-4" />
-                    Like <span className="text-slate-400 font-extrabold">{reactionCounts.like}</span>
+                    Support{" "}
+                    <span className="text-slate-400 font-extrabold">{reactionCounts.support}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => toggleReaction("helpful")}
                     className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all flex items-center gap-2 ${
-                      myReaction === "helpful"
+                      myReactions.has("helpful")
                         ? "bg-blue-50 border-blue-200 text-primary"
                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
@@ -292,7 +449,7 @@ export default function PostDetailPage() {
                     type="button"
                     onClick={() => toggleReaction("relate")}
                     className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all flex items-center gap-2 ${
-                      myReaction === "relate"
+                      myReactions.has("relate")
                         ? "bg-purple-50 border-purple-200 text-purple-700"
                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
@@ -314,7 +471,7 @@ export default function PostDetailPage() {
               </div>
             </div>
 
-            {/* COMMENTS (UI ONLY) */}
+            {/* COMMENTS */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest flex items-center gap-2">
@@ -322,11 +479,11 @@ export default function PostDetailPage() {
                   Comments
                 </h2>
                 <span className="text-xs font-bold text-slate-400">
-                  {comments.length} total
+                  {commentLoading ? "Loading..." : `${comments.length} total`}
                 </span>
               </div>
 
-              {/* Comment composer */}
+              {/* Composer */}
               <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50">
                 <textarea
                   value={commentText}
@@ -334,47 +491,64 @@ export default function PostDetailPage() {
                   placeholder="Add a comment..."
                   className="w-full min-h-[90px] bg-transparent outline-none resize-none text-sm font-medium text-slate-700 placeholder:text-slate-400 break-all"
                 />
+
                 <div className="flex items-center justify-between mt-3">
                   <p className="text-[11px] font-bold text-slate-400">
                     Keep it respectful. No personal info.
                   </p>
-                  <button
-                    type="button"
-                    onClick={addComment}
-                    disabled={!commentText.trim()}
-                    className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Send className="w-4 h-4" />
-                    Post
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCommentAnon((v) => !v)}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
+                        commentAnon
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {commentAnon ? "Commenting anonymously" : "Click to comment anonymously"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={addComment}
+                      disabled={!commentText.trim() || !meId}
+                      className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <Send className="w-4 h-4" />
+                      Post
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Comment list */}
+              {/* List */}
               <div className="mt-6 space-y-4">
                 {comments.map((c) => (
                   <div
                     key={c.id}
                     className="border border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition-all"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-sm font-bold text-slate-900">
-                          {c.username}
-                        </p>
+                        <p className="text-sm font-bold text-slate-900">{c.username}</p>
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">
                           • {c.time}
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => likeComment(c.id)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2"
-                      >
-                        <Heart className="w-4 h-4" />
-                        {c.likes}
-                      </button>
+                      {meId && c.authorId === meId ? (
+                        <button
+                          type="button"
+                          onClick={() => deleteComment(c.id)}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2"
+                          title="Delete comment"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      ) : null}
                     </div>
 
                     <p className="mt-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line break-all">

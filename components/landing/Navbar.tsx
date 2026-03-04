@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MoveRight } from "lucide-react";
+import Image from "next/image";
 
 export default function Navbar() {
   return (
@@ -9,7 +10,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-bold text-lg">G</div>
+            <Image src="/G.png" alt="Logo" width={40} height={40} />
             <span className="text-xl font-bold text-slate-900 tracking-tight">Geddit</span>
           </Link>
           <div className="flex items-center gap-8">

@@ -11,6 +11,7 @@ import Image from "next/image";
 export default function FeedLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const supabase = createClient();
+    const isPollPage = pathname === "/poll";
 
     const [alias, setAlias] = useState<string | null>(null);
 
@@ -225,6 +226,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     {/* Community Sub-Header Bar (Wireframe 3) */}
                     <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
 
+                    {!isPollPage && (
                         <div className="flex items-center gap-4">
                             <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
                                 <Filter className="w-4 h-4" />
@@ -238,6 +240,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                                 Add new
                             </Link>
                         </div>
+                    )}
                     </div>
 
                     {children}

@@ -19,39 +19,39 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
         let cancelled = false;
 
         async function loadProfile() {
-        const { data: userRes } = await supabase.auth.getUser();
-        const user = userRes.user;
+            const { data: userRes } = await supabase.auth.getUser();
+            const user = userRes.user;
 
-        if (!user) {
-            if (!cancelled) setAlias(null);
-            return;
-        }
-
-        const { data, error } = await supabase
-            .from("profiles")
-            .select("alias")
-            .eq("id", user.id)
-            .maybeSingle();
-
-        if (!cancelled) {
-            if (error) {
-            setAlias(null);
-            } else {
-            setAlias(data?.alias ?? null);
+            if (!user) {
+                if (!cancelled) setAlias(null);
+                return;
             }
-        }
+
+            const { data, error } = await supabase
+                .from("profiles")
+                .select("alias")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            if (!cancelled) {
+                if (error) {
+                    setAlias(null);
+                } else {
+                    setAlias(data?.alias ?? null);
+                }
+            }
         }
 
         loadProfile();
 
         // Optional: live updates if auth state changes (login/logout)
         const { data: sub } = supabase.auth.onAuthStateChange(() => {
-        loadProfile();
+            loadProfile();
         });
 
         return () => {
-        cancelled = true;
-        sub.subscription.unsubscribe();
+            cancelled = true;
+            sub.subscription.unsubscribe();
         };
     }, [supabase]);
     const navItems = [
@@ -64,22 +64,22 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
     const [logoutOpen, setLogoutOpen] = useState(false);
 
     useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-        if (e.key === "Escape") {
-        setMenuOpen(false);
-        setLogoutOpen(false);
+        function onKeyDown(e: KeyboardEvent) {
+            if (e.key === "Escape") {
+                setMenuOpen(false);
+                setLogoutOpen(false);
+            }
         }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
     }, []);
 
     async function handleLogout() {
-    await supabase.auth.signOut();
-    setLogoutOpen(false);
-    setMenuOpen(false);
-    // optional: redirect after logout
-    window.location.href = "/";
+        await supabase.auth.signOut();
+        setLogoutOpen(false);
+        setMenuOpen(false);
+        // optional: redirect after logout
+        window.location.href = "/";
     }
 
     return (
@@ -122,10 +122,10 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                                 aria-expanded={menuOpen}
                             >
                                 <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                                <User className="w-4 h-4" />
+                                    <User className="w-4 h-4" />
                                 </div>
                                 <span className="text-sm font-bold hidden sm:block">
-                                {alias ? `@${alias}` : "Guest"}
+                                    {alias ? `@${alias}` : "Guest"}
                                 </span>
                                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
                             </button>
@@ -133,59 +133,59 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                             {/* Click-outside overlay */}
                             {menuOpen && (
                                 <button
-                                type="button"
-                                className="fixed inset-0 z-40 cursor-default"
-                                onClick={() => setMenuOpen(false)}
-                                aria-label="Close menu overlay"
+                                    type="button"
+                                    className="fixed inset-0 z-40 cursor-default"
+                                    onClick={() => setMenuOpen(false)}
+                                    aria-label="Close menu overlay"
                                 />
                             )}
 
                             {/* Dropdown */}
                             {menuOpen && (
                                 <div
-                                className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-lg z-50 overflow-hidden"
-                                role="menu"
+                                    className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-lg z-50 overflow-hidden"
+                                    role="menu"
                                 >
-                                <div className="px-4 py-3 border-b border-slate-100">
-                                    <p className="text-xs font-semibold text-slate-500">Signed in as</p>
-                                    <p className="text-sm font-bold text-slate-900 truncate">{alias ? `@${alias}` : "Guest"}</p>
-                                </div>
+                                    <div className="px-4 py-3 border-b border-slate-100">
+                                        <p className="text-xs font-semibold text-slate-500">Signed in as</p>
+                                        <p className="text-sm font-bold text-slate-900 truncate">{alias ? `@${alias}` : "Guest"}</p>
+                                    </div>
 
-                                <div className="py-1">
-                                    <Link
-                                    href="/profile"
-                                    className="block px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                                    role="menuitem"
-                                    onClick={() => setMenuOpen(false)}
-                                    >
-                                    View Profile
-                                    </Link>
+                                    <div className="py-1">
+                                        <Link
+                                            href="/profile"
+                                            className="block px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                            role="menuitem"
+                                            onClick={() => setMenuOpen(false)}
+                                        >
+                                            View Profile
+                                        </Link>
 
-                                    <Link
-                                    href="/settings"
-                                    className="block px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                                    role="menuitem"
-                                    onClick={() => setMenuOpen(false)}
-                                    >
-                                    Settings
-                                    </Link>
+                                        <Link
+                                            href="/settings"
+                                            className="block px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                            role="menuitem"
+                                            onClick={() => setMenuOpen(false)}
+                                        >
+                                            Settings
+                                        </Link>
 
-                                    <button
-                                    type="button"
-                                    className="w-full text-left px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
-                                    role="menuitem"
-                                    onClick={() => {
-                                        setLogoutOpen(true);
-                                        setMenuOpen(false);
-                                    }}
-                                    disabled={!alias} // optional: disable logout for Guest
-                                    >
-                                    Logout
-                                    </button>
-                                </div>
+                                        <button
+                                            type="button"
+                                            className="w-full text-left px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                setLogoutOpen(true);
+                                                setMenuOpen(false);
+                                            }}
+                                            disabled={!alias} // optional: disable logout for Guest
+                                        >
+                                            Logout
+                                        </button>
+                                    </div>
                                 </div>
                             )}
-                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -216,6 +216,12 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                                 <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Saved Posts</p>
                                 <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Your Interactions</p>
                                 <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Moderation Hub</p>
+                                <Link
+                                    href="/drafts"
+                                    className="block hover:text-primary transition-colors py-1.5"
+                                >
+                                    My Drafts
+                                </Link>
                             </div>
                         </div>
                     </div>
@@ -226,21 +232,21 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     {/* Community Sub-Header Bar (Wireframe 3) */}
                     <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
 
-                    {!isPollPage && (
-                        <div className="flex items-center gap-4">
-                            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
-                                <Filter className="w-4 h-4" />
-                                Filter
-                            </button>
-                            <Link
-                                href="/feed/new"
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-sm shadow-primary/10"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add new
-                            </Link>
-                        </div>
-                    )}
+                        {!isPollPage && (
+                            <div className="flex items-center gap-4">
+                                <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                                    <Filter className="w-4 h-4" />
+                                    Filter
+                                </button>
+                                <Link
+                                    href="/feed/new"
+                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-sm shadow-primary/10"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add new
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
                     {children}
@@ -291,35 +297,35 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                 <div className="fixed inset-0 z-[60] flex items-center justify-center">
                     {/* Backdrop */}
                     <button
-                    type="button"
-                    className="absolute inset-0 bg-black/40"
-                    onClick={() => setLogoutOpen(false)}
-                    aria-label="Close logout modal"
+                        type="button"
+                        className="absolute inset-0 bg-black/40"
+                        onClick={() => setLogoutOpen(false)}
+                        aria-label="Close logout modal"
                     />
 
                     {/* Modal */}
                     <div className="relative w-[92vw] max-w-sm rounded-2xl bg-white border border-slate-200 shadow-xl p-6">
-                    <h3 className="text-base font-bold text-slate-900">Confirm logout</h3>
-                    <p className="text-sm text-slate-600 mt-2">
-                        Do you want to logout?
-                    </p>
+                        <h3 className="text-base font-bold text-slate-900">Confirm logout</h3>
+                        <p className="text-sm text-slate-600 mt-2">
+                            Do you want to logout?
+                        </p>
 
-                    <div className="mt-6 flex justify-end gap-3">
-                        <button
-                        type="button"
-                        onClick={() => setLogoutOpen(false)}
-                        className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
-                        >
-                        Cancel
-                        </button>
-                        <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700"
-                        >
-                        Logout
-                        </button>
-                    </div>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setLogoutOpen(false)}
+                                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700"
+                            >
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

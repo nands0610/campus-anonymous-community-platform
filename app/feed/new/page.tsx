@@ -1,27 +1,39 @@
 "use client";
 
 import FeedLayout from "@/components/feed/FeedLayout";
-import { ArrowLeft, Bold, Italic, List, ImageIcon, Tag, Send } from "lucide-react";
+import { ArrowLeft, Tag, Send } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function NewPostPage() {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [tags, setTags] = useState<string[]>([]);
     const [currentTag, setCurrentTag] = useState("");
-    const [isAnonymous, setIsAnonymous] = useState(true);  
+    const [isAnonymous, setIsAnonymous] = useState(true);
+
+    const searchParams = useSearchParams();
+    const draftId = searchParams.get("draft");
+
+    const supabase = createClient();
+    const router = useRouter();
+
+    const [postType, setPostType] = useState<"confession" | "advice">("confession");
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [isDraftSaving, setIsDraftSaving] = useState(false);
+    const [draftError, setDraftError] = useState<string | null>(null);
 
     const pastelColors = [
-        "border-[#38bdf8] text-[#0369A1] bg-white border", // Blue
-        "border-[#4ade80] text-[#15803D] bg-white border", // Green
-        "border-[#f472b6] text-[#BE185D] bg-white border", // Pink
-        "border-[#a78bfa] text-[#7E22CE] bg-white border", // Purple
-        "border-[#fbbf24] text-[#A16207] bg-white border", // Yellow
-        "border-[#fb923c] text-[#C2410C] bg-white border", // Orange
+        "border-[#38bdf8] text-[#0369A1] bg-white border",
+        "border-[#4ade80] text-[#15803D] bg-white border",
+        "border-[#f472b6] text-[#BE185D] bg-white border",
+        "border-[#a78bfa] text-[#7E22CE] bg-white border",
+        "border-[#fbbf24] text-[#A16207] bg-white border",
+        "border-[#fb923c] text-[#C2410C] bg-white border",
     ];
 
     const handleAddTag = (e: React.KeyboardEvent) => {
@@ -38,15 +50,34 @@ export default function NewPostPage() {
         setTags(tags.filter((t) => t !== tagToRemove));
     };
 
-    const supabase = createClient();
-    const router = useRouter();
+    /* ---------------- LOAD DRAFT ---------------- */
 
-    const [postType, setPostType] = useState<"confession" | "advice">("confession");
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
-    const [showCancelModal, setShowCancelModal] = useState(false);
-    const [isDraftSaving, setIsDraftSaving] = useState(false);
-    const [draftError, setDraftError] = useState<string | null>(null);
+    useEffect(() => {
+        if (!draftId) return;
+
+        async function loadDraft() {
+            const { data, error } = await supabase
+                .from("posts")
+                .select("*")
+                .eq("id", draftId)
+                .single();
+
+            if (error) {
+                console.error("Draft load error:", error);
+                return;
+            }
+
+            if (data) {
+                setTitle(data.title || "");
+                setContent(data.body || "");
+                setTags(data.user_tags || []);
+                setPostType(data.type);
+                setIsAnonymous(data.is_anonymous);
+            }
+        }
+
+        loadDraft();
+    }, [draftId]);
 
     function handleCancelClick() {
         const hasContent =
@@ -62,35 +93,60 @@ export default function NewPostPage() {
 
         setDraftError(null);
         setShowCancelModal(true);
-        }
+    }
 
-        function handleDelete() {
-        setShowCancelModal(false);
-        router.push("/feed");
-        }
+async function handleDelete() {
+    setShowCancelModal(false);
 
-        async function handleSaveDraft() {
+    if (draftId) {
+        await supabase
+            .from("posts")
+            .delete()
+            .eq("id", draftId);
+    }
+
+    router.push("/feed");
+}
+
+    /* ---------------- SAVE DRAFT ---------------- */
+
+    async function handleSaveDraft() {
         setIsDraftSaving(true);
         setDraftError(null);
 
-        const { data: userRes, error: userErr } = await supabase.auth.getUser();
-        if (userErr || !userRes.user) {
+        const { data: userRes } = await supabase.auth.getUser();
+        const user = userRes.user;
+
+        if (!user) {
             setDraftError("You must be logged in.");
             setIsDraftSaving(false);
             return;
         }
 
-        const user = userRes.user;
+        let error;
 
-        const { error } = await supabase.from("posts").insert({
-            author_id: user.id,
-            type: postType,
-            status: "draft",
-            title: title.trim() || null,
-            body: content.trim() || "",
-            user_tags: tags.map(t => t.trim()).filter(Boolean),
-            is_anonymous: isAnonymous,
-        });
+        if (draftId) {
+            ({ error } = await supabase
+                .from("posts")
+                .update({
+                    title: title.trim() || null,
+                    body: content.trim() || "",
+                    user_tags: tags,
+                    type: postType,
+                    is_anonymous: isAnonymous,
+                })
+                .eq("id", draftId));
+        } else {
+            ({ error } = await supabase.from("posts").insert({
+                author_id: user.id,
+                status: "draft",
+                title: title.trim() || null,
+                body: content.trim() || "",
+                user_tags: tags,
+                type: postType,
+                is_anonymous: isAnonymous,
+            }));
+        }
 
         setIsDraftSaving(false);
 
@@ -104,47 +160,64 @@ export default function NewPostPage() {
         router.refresh();
     }
 
+    /* ---------------- POST ---------------- */
+
     async function handlePost() {
-    setIsSaving(true);
-    setSaveError(null);
+        setIsSaving(true);
+        setSaveError(null);
 
-    // Basic validation
-    if (!content.trim()) {
-        setSaveError("Post content cannot be empty.");
+        if (!content.trim()) {
+            setSaveError("Post content cannot be empty.");
+            setIsSaving(false);
+            return;
+        }
+
+        const { data: userRes } = await supabase.auth.getUser();
+        const user = userRes.user;
+
+        if (!user) {
+            setSaveError("You must be logged in.");
+            setIsSaving(false);
+            return;
+        }
+
+        let error;
+
+        if (draftId) {
+            ({ error } = await supabase
+                .from("posts")
+                .update({
+                    status: "published",
+                    title: title.trim() || null,
+                    body: content.trim(),
+                    user_tags: tags,
+                    type: postType,
+                    is_anonymous: isAnonymous,
+                    published_at: new Date().toISOString(),
+                })
+                .eq("id", draftId));
+        } else {
+            ({ error } = await supabase.from("posts").insert({
+                author_id: user.id,
+                status: "published",
+                title: title.trim() || null,
+                body: content.trim(),
+                user_tags: tags,
+                type: postType,
+                is_anonymous: isAnonymous,
+                published_at: new Date().toISOString(),
+            }));
+        }
+
         setIsSaving(false);
-        return;
-    }
 
-    const { data: userRes, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !userRes.user) {
-        setSaveError("You must be logged in to post.");
-        setIsSaving(false);
-        return;
-    }
+        if (error) {
+            setSaveError(error.message);
+            return;
+        }
 
-    const user = userRes.user;
-
-    const { error } = await supabase.from("posts").insert({
-        author_id: user.id,
-        type: postType,
-        status: "published",
-        title: title.trim() || null,
-        body: content.trim(),
-        user_tags: tags.map((t) => t.trim()).filter(Boolean),
-        // mood: null, toxicity_score: null, pii_flag: false, 
-        is_anonymous: isAnonymous,
-        published_at: new Date().toISOString(),
-    });
-
-    setIsSaving(false);
-
-    if (error) {
-        setSaveError(error.message);
-        return;
-    }
-
-    router.push("/feed");
-    router.refresh();
+        router.push("/feed");
+        router.refresh();
     }
 
     return (
@@ -165,31 +238,29 @@ export default function NewPostPage() {
 
                     <div className="p-8 space-y-8">
                         <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase">Post Type</label>
-                        <div className="flex gap-2">
-                            <button
-                            type="button"
-                            onClick={() => setPostType("confession")}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                                postType === "confession"
-                                ? "bg-primary text-white border-primary"
-                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                            }`}
-                            >
-                            Confession
-                            </button>
-                            <button
-                            type="button"
-                            onClick={() => setPostType("advice")}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                                postType === "advice"
-                                ? "bg-primary text-white border-primary"
-                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                            }`}
-                            >
-                            Advice
-                            </button>
-                        </div>
+                            <label className="text-xs font-bold text-slate-400 uppercase">Post Type</label>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPostType("confession")}
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${postType === "confession"
+                                            ? "bg-primary text-white border-primary"
+                                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                >
+                                    Confession
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPostType("advice")}
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${postType === "advice"
+                                            ? "bg-primary text-white border-primary"
+                                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                        }`}
+                                >
+                                    Advice
+                                </button>
+                            </div>
                         </div>
 
                         {/* Anonymous Toggle */}
@@ -200,27 +271,25 @@ export default function NewPostPage() {
 
                             <div className="flex gap-2">
                                 <button
-                                type="button"
-                                onClick={() => setIsAnonymous(true)}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                                    isAnonymous
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                                }`}
+                                    type="button"
+                                    onClick={() => setIsAnonymous(true)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${isAnonymous
+                                            ? "bg-primary text-white border-primary"
+                                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                        }`}
                                 >
-                                Post Anonymously
+                                    Post Anonymously
                                 </button>
 
                                 <button
-                                type="button"
-                                onClick={() => setIsAnonymous(false)}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                                    !isAnonymous
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                                }`}
+                                    type="button"
+                                    onClick={() => setIsAnonymous(false)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${!isAnonymous
+                                            ? "bg-primary text-white border-primary"
+                                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                        }`}
                                 >
-                                Show My Alias
+                                    Show My Alias
                                 </button>
                             </div>
                         </div>
@@ -307,44 +376,44 @@ export default function NewPostPage() {
             {showCancelModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div
-                    className="absolute inset-0 bg-black/40"
-                    onClick={() => setShowCancelModal(false)}
+                        className="absolute inset-0 bg-black/40"
+                        onClick={() => setShowCancelModal(false)}
                     />
                     <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-md">
-                    <h3 className="text-lg font-bold text-slate-900">
-                        Save as draft?
-                    </h3>
-                    <p className="text-sm text-slate-500 mt-2">
-                        You have unsaved changes. Do you want to save this post as a draft?
-                    </p>
-
-                    {draftError && (
-                        <p className="text-sm font-bold text-red-600 mt-3">
-                        {draftError}
+                        <h3 className="text-lg font-bold text-slate-900">
+                            Save as draft?
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-2">
+                            You have unsaved changes. Do you want to save this post as a draft?
                         </p>
-                    )}
 
-                    <div className="mt-6 flex justify-end gap-3">
-                        <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="px-4 py-2 rounded-lg font-bold text-sm border border-slate-200 text-slate-600 hover:bg-slate-50"
-                        >
-                        Delete
-                        </button>
+                        {draftError && (
+                            <p className="text-sm font-bold text-red-600 mt-3">
+                                {draftError}
+                            </p>
+                        )}
 
-                        <button
-                        type="button"
-                        onClick={handleSaveDraft}
-                        disabled={isDraftSaving}
-                        className="px-4 py-2 rounded-lg font-bold text-sm bg-primary text-white hover:bg-blue-700 disabled:opacity-60"
-                        >
-                        {isDraftSaving ? "Saving..." : "Save as Draft"}
-                        </button>
-                    </div>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                className="px-4 py-2 rounded-lg font-bold text-sm border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            >
+                                Delete
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveDraft}
+                                disabled={isDraftSaving}
+                                className="px-4 py-2 rounded-lg font-bold text-sm bg-primary text-white hover:bg-blue-700 disabled:opacity-60"
+                            >
+                                {isDraftSaving ? "Saving..." : "Save as Draft"}
+                            </button>
+                        </div>
                     </div>
                 </div>
-                )}
+            )}
         </FeedLayout>
     );
 }

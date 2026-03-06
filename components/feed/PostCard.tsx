@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquare, Heart, Share2, MoreHorizontal, User, Flag, Loader2, AlertCircle } from "lucide-react";
+import { MessageSquare, Heart, Bookmark, MoreHorizontal, User, Flag, Loader2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -17,6 +17,7 @@ interface PostCardProps {
     tags: string[];
     reactions: number;
     comments: number;
+    onSaveToggle?: () => void;
 }
 
 const FLAG_REASONS = [
@@ -38,6 +39,7 @@ export default function PostCard({
     tags,
     reactions,
     comments,
+    onSaveToggle,
 }: PostCardProps) {
     const supabase = createClient();
     const pastelColors = [
@@ -56,6 +58,10 @@ export default function PostCard({
     const [flagError, setFlagError] = useState<string | null>(null);
     const [flagSuccess, setFlagSuccess] = useState(false);
     const [isPostFlagged, setIsPostFlagged] = useState(false);
+    const [isPostSaved, setIsPostSaved] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [saveAction, setSaveAction] = useState<"save" | "unsave" | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -87,7 +93,35 @@ export default function PostCard({
             }
         }
 
+        async function checkIfPostSaved() {
+            try {
+                const { data: sessionData } = await supabase.auth.getSession();
+                if (!sessionData.session?.user?.id) {
+                    return;
+                }
+
+                const { data } = await supabase
+                    .from("saved_posts")
+                    .select("id")
+                    .eq("post_id", id)
+                    .eq("user_id", sessionData.session.user.id)
+                    .single();
+
+                if (!cancelled) {
+                    if (data) {
+                        setIsPostSaved(true);
+                    }
+                }
+            } catch (err) {
+                // No save found or error occurred, that's ok
+                if (!cancelled) {
+                    setIsPostSaved(false);
+                }
+            }
+        }
+
         checkIfPostFlagged();
+        checkIfPostSaved();
 
         return () => {
             cancelled = true;
@@ -144,6 +178,56 @@ export default function PostCard({
         } catch (err: any) {
             setFlagError(err.message || "An error occurred");
             setIsFlagging(false);
+        }
+    }
+
+    async function handleSaveToggle() {
+        setIsSaving(true);
+        const isUnsaving = isPostSaved;
+        setSaveAction(isUnsaving ? "unsave" : "save");
+
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (!sessionData.session?.access_token) {
+                alert("You must be logged in to save posts");
+                setIsSaving(false);
+                return;
+            }
+
+            const res = await fetch("/api/posts/save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${sessionData.session.access_token}`,
+                },
+                body: JSON.stringify({
+                    postId: id,
+                    save: !isPostSaved,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                setIsPostSaved(!isPostSaved);
+                setSaveSuccess(true);
+                if (onSaveToggle) {
+                    onSaveToggle();
+                }
+                setTimeout(() => {
+                    setSaveSuccess(false);
+                    setSaveAction(null);
+                }, 2000);
+            } else {
+                alert(data.error || "Failed to save post");
+                setSaveAction(null);
+            }
+        } catch (err: any) {
+            console.error("Failed to save post:", err);
+            alert("Failed to save post: " + err.message);
+            setSaveAction(null);
+        } finally {
+            setIsSaving(false);
         }
     }
 
@@ -232,16 +316,36 @@ export default function PostCard({
                                 {isPostFlagged ? "Flagged" : "Flag"}
                             </button>
                             <button
-                                onClick={(e) => e.preventDefault()}
-                                className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition-all flex items-center gap-1.5"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleSaveToggle();
+                                }}
+                                disabled={isSaving}
+                                className={`text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                                    isPostSaved
+                                        ? "text-primary"
+                                        : "text-slate-400 hover:text-primary"
+                                } ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
                             >
-                                <Share2 className="w-4 h-4" />
-                                Share
+                                <Bookmark className={`w-4 h-4 ${isPostSaved ? "fill-current" : ""}`} />
+                                {isPostSaved ? "Saved" : "Save"}
                             </button>
                         </div>
                     </div>
                 </div>
             </Link>
+
+            {/* Save Success Toast */}
+            {saveSuccess && (
+                <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-green-500 text-white rounded-lg px-4 py-3 shadow-lg flex items-center gap-2">
+                        <Bookmark className="w-4 h-4 fill-current" />
+                        <span className="text-sm font-semibold">
+                            {saveAction === "unsave" ? "Post unsaved!" : "Post saved!"}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* Flag Modal */}
             {flagModalOpen && (

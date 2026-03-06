@@ -226,12 +226,17 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                         <div className="pt-6 border-t border-slate-100">
                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-3">Your Space</h4>
                             <div className="space-y-1 text-sm font-medium text-slate-600 px-3">
-                                <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Saved Posts</p>
+                                <Link
+                                    href="/saved"
+                                    className={`block py-1.5 transition-colors ${pathname === "/saved" ? "text-primary font-bold" : "hover:text-primary"}`}
+                                >
+                                    Saved Posts
+                                </Link>
                                 <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Your Interactions</p>
                                 <p className="hover:text-primary cursor-pointer transition-colors py-1.5">Moderation Hub</p>
                                 <Link
                                     href="/drafts"
-                                    className="block hover:text-primary transition-colors py-1.5"
+                                    className={`block py-1.5 transition-colors ${pathname === "/drafts" ? "text-primary font-bold" : "hover:text-primary"}`}
                                 >
                                     My Drafts
                                 </Link>

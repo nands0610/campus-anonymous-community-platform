@@ -2,7 +2,7 @@
 
 import { Home, TrendingUp, BarChart2, Search, Bell, User, Plus, Filter, MessageSquare, Heart, Share2, MoreHorizontal, ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -10,10 +10,12 @@ import Image from "next/image";
 
 export default function FeedLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const router = useRouter();
     const supabase = createClient();
     const isPollPage = pathname === "/poll";
 
     const [alias, setAlias] = useState<string | null>(null);
+    const [searchInput, setSearchInput] = useState("");
 
     useEffect(() => {
         let cancelled = false;
@@ -54,6 +56,13 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
             sub.subscription.unsubscribe();
         };
     }, [supabase]);
+
+    function handleSearch(e: React.FormEvent) {
+        e.preventDefault();
+        if (searchInput.trim()) {
+            router.push(`/search?q=${encodeURIComponent(searchInput.trim())}`);
+        }
+    }
     const navItems = [
         { icon: Home, label: "Feed", href: "/feed" },
         { icon: TrendingUp, label: "Trending", href: "/trending" },
@@ -103,11 +112,15 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     <div className="flex items-center gap-6">
                         <div className="hidden lg:flex items-center relative">
                             <Search className="absolute left-3.5 w-4 h-4 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search campus posts..."
-                                className="pl-10 pr-4 py-2 bg-slate-100 border-transparent border focus:bg-white focus:border-primary/20 rounded-md text-sm font-medium outline-none transition-all w-64"
-                            />
+                            <form onSubmit={handleSearch} className="flex">
+                                <input
+                                    type="text"
+                                    placeholder="Search campus posts..."
+                                    value={searchInput}
+                                    onChange={(e) => setSearchInput(e.target.value)}
+                                    className="pl-10 pr-4 py-2 bg-slate-100 border-transparent border focus:bg-white focus:border-primary/20 rounded-md text-sm font-medium outline-none transition-all w-64"
+                                />
+                            </form>
                         </div>
                         <button className="text-slate-500 hover:text-primary transition-all relative">
                             <Bell className="w-5 h-5" />

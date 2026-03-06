@@ -169,7 +169,7 @@ export default function PostCard({
                             </div>
                         </div>
                         <button
-                            onClick={(e) => e.preventDefault()} 
+                            onClick={(e) => e.preventDefault()}
                             className="text-slate-300 hover:text-slate-900 transition-all"
                         >
                             <MoreHorizontal className="w-4 h-4" />
@@ -223,11 +223,10 @@ export default function PostCard({
                                     }
                                 }}
                                 disabled={isPostFlagged}
-                                className={`text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                                    isPostFlagged
+                                className={`text-xs font-semibold flex items-center gap-1.5 transition-all ${isPostFlagged
                                         ? "text-slate-300 cursor-not-allowed"
                                         : "text-slate-400 hover:text-amber-600 cursor-pointer"
-                                }`}
+                                    }`}
                             >
                                 <Flag className="w-4 h-4" />
                                 {isPostFlagged ? "Flagged" : "Flag"}
@@ -281,15 +280,13 @@ export default function PostCard({
                                                 setSelectedReason(reason.value);
                                                 setFlagError(null);
                                             }}
-                                            className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                                                selectedReason === reason.value
+                                            className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${selectedReason === reason.value
                                                     ? "border-primary bg-blue-50"
                                                     : "border-slate-200 hover:border-slate-300 bg-white"
-                                            }`}
+                                                }`}
                                         >
-                                            <p className={`text-sm font-semibold ${
-                                                selectedReason === reason.value ? "text-primary" : "text-slate-700"
-                                            }`}>
+                                            <p className={`text-sm font-semibold ${selectedReason === reason.value ? "text-primary" : "text-slate-700"
+                                                }`}>
                                                 {reason.label}
                                             </p>
                                         </button>

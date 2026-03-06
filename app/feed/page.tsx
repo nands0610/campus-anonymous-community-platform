@@ -51,40 +51,40 @@ export default function FeedPage() {
         let cancelled = false;
 
         async function load() {
-        setLoading(true);
-        setError(null);
+            setLoading(true);
+            setError(null);
 
-        let query = supabase
-            .from("posts")
-            .select(
-            "id,title,body,type,created_at,published_at,user_tags,status,is_anonymous,profiles:author_id ( alias )"
-            )
-            .eq("status", "published")
-            .neq("type", "poll")
-            .order("published_at", { ascending: false, nullsFirst: false })
-            .limit(30);
+            let query = supabase
+                .from("posts")
+                .select(
+                    "id,title,body,type,created_at,published_at,user_tags,status,is_anonymous,profiles:author_id ( alias )"
+                )
+                .eq("status", "published")
+                .neq("type", "poll")
+                .order("published_at", { ascending: false, nullsFirst: false })
+                .limit(30);
 
-        if (feedFilter !== "all") {
-            query = query.eq("type", feedFilter);
-        }
+            if (feedFilter !== "all") {
+                query = query.eq("type", feedFilter);
+            }
 
-        const { data, error } = await query;
+            const { data, error } = await query;
 
-        if (cancelled) return;
+            if (cancelled) return;
 
-        if (error) {
-            setError(error.message);
-            setPosts([]);
-        } else {
-            setPosts((data ?? []) as DBPost[]);
-        }
+            if (error) {
+                setError(error.message);
+                setPosts([]);
+            } else {
+                setPosts((data ?? []) as DBPost[]);
+            }
 
-        setLoading(false);
+            setLoading(false);
         }
 
         load();
         return () => {
-        cancelled = true;
+            cancelled = true;
         };
     }, [supabase, feedFilter]);
 
@@ -106,76 +106,73 @@ export default function FeedPage() {
 
     return (
         <FeedLayout>
-        <div className="space-y-6">
-            {/* FILTER TOGGLE */}
-            <div className="flex items-center gap-2">
-            <button
-                type="button"
-                onClick={() => setFeedFilter("all")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                feedFilter === "all"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                }`}
-            >
-                All
-            </button>
+            <div className="space-y-6">
+                {/* FILTER TOGGLE */}
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setFeedFilter("all")}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${feedFilter === "all"
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
+                    >
+                        All
+                    </button>
 
-            <button
-                type="button"
-                onClick={() => setFeedFilter("confession")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                feedFilter === "confession"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                }`}
-            >
-                Confessions
-            </button>
+                    <button
+                        type="button"
+                        onClick={() => setFeedFilter("confession")}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${feedFilter === "confession"
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
+                    >
+                        Confessions
+                    </button>
 
-            <button
-                type="button"
-                onClick={() => setFeedFilter("advice")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                feedFilter === "advice"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                }`}
-            >
-                Advice
-            </button>
-            </div>
-
-            {error ? (
-            <div className="p-4 border border-red-200 bg-red-50 rounded-xl text-sm font-bold text-red-700">
-                {error}
-            </div>
-            ) : null}
-
-            {loading ? (
-            <div className="text-sm font-bold text-slate-400">
-                Loading posts...
-            </div>
-            ) : (
-            <div className="space-y-4">
-                {cardPosts.length === 0 ? (
-                <div className="text-sm font-bold text-slate-400">
-                    No posts yet. Be the first to post.
+                    <button
+                        type="button"
+                        onClick={() => setFeedFilter("advice")}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${feedFilter === "advice"
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
+                    >
+                        Advice
+                    </button>
                 </div>
-                ) : (
-                cardPosts.map((post) => (
-                    <PostCard key={post.id} {...post} />
-                ))
-                )}
-            </div>
-            )}
 
-            <div className="text-center py-12">
-            <button className="text-sm font-bold text-slate-400 hover:text-primary transition-all">
-                Show older posts
-            </button>
+                {error ? (
+                    <div className="p-4 border border-red-200 bg-red-50 rounded-xl text-sm font-bold text-red-700">
+                        {error}
+                    </div>
+                ) : null}
+
+                {loading ? (
+                    <div className="text-sm font-bold text-slate-400">
+                        Loading posts...
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {cardPosts.length === 0 ? (
+                            <div className="text-sm font-bold text-slate-400">
+                                No posts yet. Be the first to post.
+                            </div>
+                        ) : (
+                            cardPosts.map((post) => (
+                                <PostCard key={post.id} {...post} />
+                            ))
+                        )}
+                    </div>
+                )}
+
+                <div className="text-center py-12">
+                    <button className="text-sm font-bold text-slate-400 hover:text-primary transition-all">
+                        Show older posts
+                    </button>
+                </div>
             </div>
-        </div>
         </FeedLayout>
     );
 }

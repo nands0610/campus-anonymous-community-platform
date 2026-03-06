@@ -60,6 +60,7 @@ export default function FeedPage() {
             "id,title,body,type,created_at,published_at,user_tags,status,is_anonymous,profiles:author_id ( alias )"
             )
             .eq("status", "published")
+            .neq("type", "poll")
             .order("published_at", { ascending: false, nullsFirst: false })
             .limit(30);
 
